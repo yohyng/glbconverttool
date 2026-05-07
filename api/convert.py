@@ -1,6 +1,8 @@
 import tempfile
 from pathlib import Path
 
+import trimesh
+import trimesh.visual.material as trimesh_mat
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import Response
 
@@ -8,6 +10,27 @@ app = FastAPI()
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED = {".obj", ".mtl"}
+
+
+def _fix_materials(scene: trimesh.Scene) -> None:
+    """OBJ/MTL の SimpleMaterial を PBRMaterial に変換して色を保持する。
+
+    trimesh は MTL の Kd（拡散色）を GLB エクスポート時に正しく
+    baseColorFactor へ変換しないため、to_pbr() で明示的に変換する。
+    """
+    for geom in scene.geometry.values():
+        visual = getattr(geom, "visual", None)
+        if visual is None:
+            continue
+        mat = getattr(visual, "material", None)
+        if mat is None:
+            continue
+        if isinstance(mat, trimesh_mat.PBRMaterial):
+            continue
+        try:
+            visual.material = mat.to_pbr()
+        except Exception:
+            pass
 
 
 @app.post("/api/convert")
@@ -34,9 +57,8 @@ async def convert(files: list[UploadFile] = File(...)):
         input_path = tmpdir / Path(main_file.filename).name
 
         try:
-            import trimesh
-
             scene = trimesh.load(str(input_path), force="scene")
+            _fix_materials(scene)
             glb_bytes = scene.export(file_type="glb")
         except Exception as e:
             raise HTTPException(500, f"変換に失敗しました: {e}")

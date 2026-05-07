@@ -1,6 +1,8 @@
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const convertBtn = document.getElementById('convertBtn');
+const debugBtn = document.getElementById('debugBtn');
+const debugOutput = document.getElementById('debugOutput');
 const fileList = document.getElementById('fileList');
 const status = document.getElementById('status');
 const versionEl = document.getElementById('version');
@@ -35,7 +37,9 @@ function handleFiles(files) {
   );
   renderFileList();
   status.innerHTML = '';
-  convertBtn.disabled = !selectedFiles.some(f => /\.obj$/i.test(f.name));
+  const hasObj = selectedFiles.some(f => /\.obj$/i.test(f.name));
+  convertBtn.disabled = !hasObj;
+  debugBtn.disabled = !hasObj;
 }
 
 function renderFileList() {
@@ -44,6 +48,20 @@ function renderFileList() {
     return `<div class="file-item"><span class="ext">${ext}</span>${f.name}</div>`;
   }).join('');
 }
+
+debugBtn.addEventListener('click', async () => {
+  if (!selectedFiles.length) return;
+  debugOutput.textContent = '取得中...';
+  const formData = new FormData();
+  selectedFiles.forEach(f => formData.append('files', f));
+  try {
+    const res = await fetch('/api/debug', { method: 'POST', body: formData });
+    const data = await res.json();
+    debugOutput.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    debugOutput.textContent = 'エラー: ' + e.message;
+  }
+});
 
 convertBtn.addEventListener('click', async () => {
   if (!selectedFiles.length) return;

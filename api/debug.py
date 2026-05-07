@@ -41,12 +41,24 @@ async def debug(files: list[UploadFile] = File(...)):
                 if hasattr(base_color, "tolist"):
                     base_color = base_color.tolist()
 
+                all_attrs = {}
+                if mat is not None:
+                    for attr in vars(mat):
+                        val = getattr(mat, attr, None)
+                        if hasattr(val, "tolist"):
+                            val = val.tolist()
+                        elif hasattr(val, "__class__") and val.__class__.__name__ == "ndarray":
+                            val = val.tolist()
+                        try:
+                            import json; json.dumps(val)
+                        except Exception:
+                            val = str(val)
+                        all_attrs[attr] = val
+
                 result["geometries"][name] = {
                     "visual_type": type(visual).__name__,
                     "material_type": type(mat).__name__ if mat else None,
-                    "diffuse": diffuse,
-                    "baseColorFactor": base_color,
-                    "metallicFactor": getattr(mat, "metallicFactor", None) if mat else None,
+                    "all_material_attrs": all_attrs,
                 }
 
             return JSONResponse(result)

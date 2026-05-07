@@ -56,8 +56,12 @@ debugBtn.addEventListener('click', async () => {
   selectedFiles.forEach(f => formData.append('files', f));
   try {
     const res = await fetch('/api/debug', { method: 'POST', body: formData });
-    const data = await res.json();
-    debugOutput.textContent = JSON.stringify(data, null, 2);
+    const text = await res.text();
+    try {
+      debugOutput.textContent = JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      debugOutput.textContent = text;
+    }
   } catch (e) {
     debugOutput.textContent = 'エラー: ' + e.message;
   }

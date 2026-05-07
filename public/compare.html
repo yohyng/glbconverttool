@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLB Converter - 比較</title>
+  <link rel="stylesheet" href="/compare.css" />
+</head>
+<body>
+  <div class="header">
+    <a href="/" class="back">← 変換ツール</a>
+    <h1>モデル比較</h1>
+    <label class="sync-toggle">
+      <input type="checkbox" id="syncCam" checked />
+      カメラ同期
+    </label>
+  </div>
+
+  <div class="main">
+    <div class="panel" id="panel-left">
+      <div class="panel-head">
+        <span class="panel-title">変換前（OBJ）</span>
+        <span class="panel-file" id="label-left">ファイルを選択</span>
+        <button class="reload-btn" id="reload-left" hidden>変更</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="canvas-left"></canvas>
+        <div class="drop-overlay" id="drop-left">
+          <span>OBJ / MTL をドロップ<br>またはクリックして選択</span>
+          <input type="file" id="input-left" accept=".obj,.mtl" multiple hidden />
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="panel" id="panel-right">
+      <div class="panel-head">
+        <span class="panel-title">変換後（GLB）</span>
+        <span class="panel-file" id="label-right">ファイルを選択</span>
+        <button class="reload-btn" id="reload-right" hidden>変更</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="canvas-right"></canvas>
+        <div class="drop-overlay" id="drop-right">
+          <span>GLB をドロップ<br>またはクリックして選択</span>
+          <input type="file" id="input-right" accept=".glb" hidden />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="/compare.js"></script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import math
 import tempfile
 from pathlib import Path
 
@@ -12,47 +13,58 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED = {".obj", ".mtl"}
 
 
-def _extract_color(mat) -> list:
-    """どのマテリアル型からでも 0-1 RGBA を返す。"""
-    import numpy as np
-
-    for attr in ("diffuse", "baseColorFactor", "main_color"):
-        val = getattr(mat, attr, None)
-        if val is None:
-            continue
-        try:
-            c = np.array(val, dtype=float).flatten()[:4]
-            if c.max() > 1.0:        # 0-255 スケールなら正規化
-                c = c / 255.0
-            c = np.clip(c, 0.0, 1.0)
-            if len(c) < 4:
-                c = np.append(c, np.ones(4 - len(c)))
-            return c.tolist()
-        except Exception:
-            pass
-    return [0.8, 0.8, 0.8, 1.0]
+def _parse_scalar(val, default: float) -> float:
+    """float または ['0.0000'] 形式の値を float に変換する。"""
+    if val is None:
+        return default
+    if isinstance(val, list):
+        val = val[0]
+    return float(val)
 
 
 def _fix_materials(scene: trimesh.Scene) -> None:
-    """全ジオメトリのマテリアルを metallic=0 の PBR に強制変換する。
+    """OBJ/MTL の SimpleMaterial を正しい PBR マテリアルに変換する。
 
-    trimesh が生成する SimpleMaterial / PBRMaterial は metallicFactor が
-    1.0 になることがあり、環境マップなしのビューアで真っ黒に見える。
-    色を保持しつつ非メタリック PBR として上書きする。
+    OBJ のメタリックワークフロー:
+      - 通常素材: Kd に色 → baseColorFactor に使用
+      - 金属素材: Kd=黒、Ks に色 → Ks を baseColorFactor に使用、metallic=1
+      - ガラス等: d < 1 → alphaMode=BLEND
+    Phong の Ns → PBR roughness は sqrt(2/(Ns+2)) で変換。
     """
     for geom in scene.geometry.values():
         visual = getattr(geom, "visual", None)
-        if visual is None:
-            continue
         mat = getattr(visual, "material", None)
         if mat is None:
             continue
+
+        kwargs = getattr(mat, "kwargs", {}) or {}
+
+        kd = [float(v) for v in kwargs.get("kd", [0.8, 0.8, 0.8])]
+        ks = [float(v) for v in kwargs.get("ks", [0.0, 0.0, 0.0])]
+        ns = _parse_scalar(kwargs.get("ns"), 0.0)
+        # d=0 は完全透明だが最低 0.05 を確保して不可視にならないようにする
+        d = max(_parse_scalar(kwargs.get("d"), 1.0), 0.05)
+
+        # Phong Ns → PBR roughness (標準変換式)
+        roughness = math.sqrt(2.0 / (ns + 2.0)) if ns >= 0 else 1.0
+        roughness = float(max(0.04, min(1.0, roughness)))
+
+        # Kd が黒で Ks に色がある → メタリックワークフロー
+        if sum(kd) < 0.01 and sum(ks) > 0.01:
+            base_color = ks[:3] + [d]
+            metallic = 1.0 if ns > 100 else 0.0
+        else:
+            base_color = kd[:3] + [d]
+            metallic = 0.0
+
+        alpha_mode = "BLEND" if d < 1.0 else "OPAQUE"
+
         try:
-            color = _extract_color(mat)
             visual.material = trimesh_mat.PBRMaterial(
-                baseColorFactor=color,
-                metallicFactor=0.0,
-                roughnessFactor=0.9,
+                baseColorFactor=base_color,
+                metallicFactor=metallic,
+                roughnessFactor=roughness,
+                alphaMode=alpha_mode,
             )
         except Exception:
             pass

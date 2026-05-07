@@ -1,0 +1,112 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f5f5;
+  color: #1a1a1a;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,.08);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+h1 { font-size: 1.5rem; font-weight: 700; }
+
+.subtitle { font-size: .875rem; color: #666; }
+
+.dropzone {
+  border: 2px dashed #d0d0d0;
+  border-radius: 10px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+
+.dropzone:hover, .dropzone.drag-over {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.dropzone-inner svg { color: #9ca3af; margin-bottom: .75rem; }
+
+.dropzone-inner p { font-size: .95rem; line-height: 1.6; color: #555; }
+
+.link { color: #3b82f6; text-decoration: underline; }
+
+.hint { font-size: .8rem; color: #9ca3af; margin-top: .5rem; }
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .875rem;
+  padding: .4rem .75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  color: #374151;
+}
+
+.file-item .ext {
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .1rem .35rem;
+  border-radius: 4px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  text-transform: uppercase;
+}
+
+.btn {
+  padding: .75rem 1.5rem;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s, opacity .2s;
+}
+
+.btn:hover:not(:disabled) { background: #2563eb; }
+
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.status { font-size: .9rem; min-height: 1.5rem; }
+
+.status .success { color: #16a34a; }
+.status .error   { color: #dc2626; }
+.status .loading { color: #6b7280; }
+
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid #d1d5db;
+  border-top-color: #6b7280;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: .4rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

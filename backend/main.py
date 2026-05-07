@@ -11,7 +11,7 @@ from converter import MAX_FILE_SIZE, convert_to_glb
 app = FastAPI(title="GLB Converter")
 
 ALLOWED_EXTENSIONS = {".obj", ".fbx", ".mtl"}
-FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+FRONTEND_DIR = Path(__file__).parent.parent / "public"
 
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")

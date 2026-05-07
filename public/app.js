@@ -3,6 +3,12 @@ const fileInput = document.getElementById('fileInput');
 const convertBtn = document.getElementById('convertBtn');
 const fileList = document.getElementById('fileList');
 const status = document.getElementById('status');
+const versionEl = document.getElementById('version');
+
+fetch('/api/version')
+  .then(r => r.json())
+  .then(d => { versionEl.textContent = `v${d.version}`; })
+  .catch(() => {});
 
 let selectedFiles = [];
 

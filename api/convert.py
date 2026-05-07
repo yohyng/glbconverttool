@@ -1,10 +1,11 @@
+import os
 import tempfile
 from pathlib import Path
 
 import trimesh
 import trimesh.visual.material as trimesh_mat
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 
 app = FastAPI()
 
@@ -31,6 +32,13 @@ def _fix_materials(scene: trimesh.Scene) -> None:
             visual.material = mat.to_pbr()
         except Exception:
             pass
+
+
+@app.get("/api/version")
+async def version():
+    sha = os.environ.get("VERCEL_GIT_COMMIT_SHA", "")
+    short = sha[:7] if sha else "dev"
+    return JSONResponse({"version": short})
 
 
 @app.post("/api/convert")

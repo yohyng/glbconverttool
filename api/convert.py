@@ -53,9 +53,19 @@ def _fix_materials(scene: trimesh.Scene) -> None:
         if sum(kd) < 0.01 and sum(ks) > 0.01:
             base_color = ks[:3] + [d]
             metallic = 1.0 if ns > 100 else 0.0
+            # 非メタリック（Ns低）は最低限の roughness を確保して白っぽく見せる
+            if metallic == 0.0:
+                roughness = max(roughness, 0.5)
         else:
             base_color = kd[:3] + [d]
             metallic = 0.0
+            # 環境マップなしビューアでも白く見えるよう roughness に下限を設ける
+            roughness = max(roughness, 0.4)
+
+        # d=0 のガラスは少し見える程度に
+        if d <= 0.05:
+            d = 0.15
+            base_color = base_color[:3] + [d]
 
         alpha_mode = "BLEND" if d < 1.0 else "OPAQUE"
 
@@ -65,6 +75,7 @@ def _fix_materials(scene: trimesh.Scene) -> None:
                 metallicFactor=metallic,
                 roughnessFactor=roughness,
                 alphaMode=alpha_mode,
+                doubleSided=True,  # キューブのストライプ防止
             )
         except Exception:
             pass
@@ -94,7 +105,7 @@ async def convert(files: list[UploadFile] = File(...)):
         input_path = tmpdir / Path(main_file.filename).name
 
         try:
-            scene = trimesh.load(str(input_path), force="scene")
+            scene = trimesh.load(str(input_path), force="scene", process=False)
             _fix_materials(scene)
             glb_bytes = scene.export(file_type="glb")
         except Exception as e:

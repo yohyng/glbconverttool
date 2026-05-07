@@ -12,11 +12,33 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED = {".obj", ".mtl"}
 
 
-def _fix_materials(scene: trimesh.Scene) -> None:
-    """OBJ/MTL の SimpleMaterial を PBRMaterial に変換して色を保持する。
+def _extract_color(mat) -> list:
+    """どのマテリアル型からでも 0-1 RGBA を返す。"""
+    import numpy as np
 
-    trimesh は MTL の Kd（拡散色）を GLB エクスポート時に正しく
-    baseColorFactor へ変換しないため、to_pbr() で明示的に変換する。
+    for attr in ("diffuse", "baseColorFactor", "main_color"):
+        val = getattr(mat, attr, None)
+        if val is None:
+            continue
+        try:
+            c = np.array(val, dtype=float).flatten()[:4]
+            if c.max() > 1.0:        # 0-255 スケールなら正規化
+                c = c / 255.0
+            c = np.clip(c, 0.0, 1.0)
+            if len(c) < 4:
+                c = np.append(c, np.ones(4 - len(c)))
+            return c.tolist()
+        except Exception:
+            pass
+    return [0.8, 0.8, 0.8, 1.0]
+
+
+def _fix_materials(scene: trimesh.Scene) -> None:
+    """全ジオメトリのマテリアルを metallic=0 の PBR に強制変換する。
+
+    trimesh が生成する SimpleMaterial / PBRMaterial は metallicFactor が
+    1.0 になることがあり、環境マップなしのビューアで真っ黒に見える。
+    色を保持しつつ非メタリック PBR として上書きする。
     """
     for geom in scene.geometry.values():
         visual = getattr(geom, "visual", None)
@@ -25,10 +47,13 @@ def _fix_materials(scene: trimesh.Scene) -> None:
         mat = getattr(visual, "material", None)
         if mat is None:
             continue
-        if isinstance(mat, trimesh_mat.PBRMaterial):
-            continue
         try:
-            visual.material = mat.to_pbr()
+            color = _extract_color(mat)
+            visual.material = trimesh_mat.PBRMaterial(
+                baseColorFactor=color,
+                metallicFactor=0.0,
+                roughnessFactor=0.9,
+            )
         except Exception:
             pass
 

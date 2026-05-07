@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: glb-converter
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 8000

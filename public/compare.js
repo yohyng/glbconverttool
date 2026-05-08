@@ -100,6 +100,46 @@ function setModel(state, object) {
   fitCamera(state, object);
 }
 
+// ── OBJ マテリアル修正（Kd=黒 → Ks を使うメタリックワークフロー対応）──
+
+function fixOBJMaterials(object) {
+  object.traverse(node => {
+    if (!node.isMesh) return;
+    const mats = Array.isArray(node.material) ? node.material : [node.material];
+    node.material = mats.map(mat => {
+      if (!mat) return mat;
+      const kd = mat.color ?? new THREE.Color(0.8, 0.8, 0.8);
+      const ks = mat.specular ?? new THREE.Color(0, 0, 0);
+      const ns = mat.shininess ?? 0;
+      const opacity = mat.opacity ?? 1.0;
+      const transparent = opacity < 1.0;
+
+      const roughness = Math.max(0.04, Math.sqrt(2.0 / (ns + 2.0)));
+
+      let color, metalness;
+      if (kd.r + kd.g + kd.b < 0.03 && ks.r + ks.g + ks.b > 0.03) {
+        // メタリックワークフロー: Ks を色として使う
+        color = ks.clone();
+        metalness = ns > 100 ? 1.0 : 0.0;
+      } else {
+        color = kd.clone();
+        metalness = 0.0;
+      }
+
+      return new THREE.MeshStandardMaterial({
+        color,
+        metalness,
+        roughness: metalness === 0 ? Math.max(roughness, 0.4) : roughness,
+        transparent,
+        opacity: Math.max(opacity, transparent ? 0.15 : 1.0),
+        side: THREE.DoubleSide,
+      });
+    });
+    if (!Array.isArray(node.material)) node.material = node.material[0];
+  });
+  return object;
+}
+
 // ── OBJ ロード ────────────────────────────────────────────
 
 async function loadOBJ(objFile, mtlFile) {
@@ -121,7 +161,7 @@ async function loadOBJ(objFile, mtlFile) {
   }
 
   URL.revokeObjectURL(objUrl);
-  return object;
+  return fixOBJMaterials(object);
 }
 
 // ── GLB ロード ────────────────────────────────────────────
@@ -147,7 +187,10 @@ function setupDrop(side, state, accept, loader) {
     try {
       const obj = await loader(files);
       setModel(state, obj);
-      const main = Array.from(files).find(f => accept.some(e => f.name.endsWith(e)));
+      // OBJ や GLB を優先表示（MTL より先に）
+      const priority = ['.obj', '.glb'];
+      const main = Array.from(files).find(f => priority.some(e => f.name.endsWith(e)))
+                ?? Array.from(files).find(f => accept.some(e => f.name.endsWith(e)));
       label.textContent = main?.name ?? '';
       drop.classList.add('hidden');
       reload.hidden = false;

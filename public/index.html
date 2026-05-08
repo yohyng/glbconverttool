@@ -9,7 +9,7 @@
 <body>
   <div class="container">
     <h1>GLB Converter</h1>
-    <p class="subtitle">OBJ を GLB に変換します。ファイルはサーバーに保存されません。</p>
+    <p class="subtitle">3D モデルをブラウザ内で GLB に変換します。ファイルは外部に送信されません。</p>
     <p class="version" id="version"></p>
 
     <div class="dropzone" id="dropzone">
@@ -20,26 +20,34 @@
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
         <p>ここにファイルをドロップ<br>または<span class="link">クリックして選択</span></p>
-        <p class="hint">対応形式: .obj（マテリアルがある場合 .mtl も同時に選択可）</p>
+        <p class="hint">OBJ · FBX · DAE · GLTF · GLB<br>MTL・テクスチャ画像（PNG/JPG など）も一緒に選択可</p>
       </div>
-      <input type="file" id="fileInput" accept=".obj,.mtl" multiple hidden />
+      <input type="file" id="fileInput"
+        accept=".obj,.fbx,.dae,.gltf,.glb,.mtl,.png,.jpg,.jpeg,.webp,.bmp,.tga"
+        multiple hidden />
     </div>
 
     <div class="file-list" id="fileList"></div>
 
-    <button class="btn" id="convertBtn" disabled>GLB に変換する</button>
-
     <div class="status" id="status"></div>
 
-    <a href="/compare.html" class="compare-link">モデル比較ビューを開く →</a>
+    <div class="preview-wrap" id="previewWrap" hidden>
+      <canvas id="preview"></canvas>
+    </div>
 
-    <details class="debug-panel">
-      <summary>デバッグ</summary>
-      <button class="btn btn-debug" id="debugBtn" disabled>マテリアル情報を確認</button>
-      <pre class="debug-output" id="debugOutput"></pre>
-    </details>
+    <button class="btn" id="convertBtn" disabled>GLB としてダウンロード</button>
+
+    <a href="/compare.html" class="compare-link">モデル比較ビューを開く →</a>
   </div>
 
-  <script src="/app.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

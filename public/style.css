@@ -6,9 +6,9 @@ body {
   color: #1a1a1a;
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem;
 }
 
 .container {
@@ -17,7 +17,7 @@ body {
   box-shadow: 0 2px 16px rgba(0,0,0,.08);
   padding: 2.5rem;
   width: 100%;
-  max-width: 520px;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -29,42 +29,26 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 
 .version { font-size: .75rem; color: #bbb; margin-top: -.5rem; }
 
-.compare-link {
-  font-size: .8rem;
-  color: #9ca3af;
-  text-align: center;
-  text-decoration: none;
-}
-.compare-link:hover { color: #3b82f6; }
-
+/* Drop zone */
 .dropzone {
   border: 2px dashed #d0d0d0;
   border-radius: 10px;
-  padding: 2.5rem 1.5rem;
+  padding: 2rem 1.5rem;
   text-align: center;
   cursor: pointer;
   transition: border-color .2s, background .2s;
 }
-
 .dropzone:hover, .dropzone.drag-over {
   border-color: #3b82f6;
   background: #eff6ff;
 }
-
 .dropzone-inner svg { color: #9ca3af; margin-bottom: .75rem; }
-
 .dropzone-inner p { font-size: .95rem; line-height: 1.6; color: #555; }
-
 .link { color: #3b82f6; text-decoration: underline; }
-
 .hint { font-size: .8rem; color: #9ca3af; margin-top: .5rem; }
 
-.file-list {
-  display: flex;
-  flex-direction: column;
-  gap: .4rem;
-}
-
+/* File list */
+.file-list { display: flex; flex-direction: column; gap: .4rem; }
 .file-item {
   display: flex;
   align-items: center;
@@ -75,17 +59,52 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   border-radius: 6px;
   color: #374151;
 }
-
-.file-item .ext {
-  font-size: .75rem;
+.ext {
+  font-size: .7rem;
   font-weight: 600;
   padding: .1rem .35rem;
   border-radius: 4px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #e5e7eb;
+  color: #6b7280;
   text-transform: uppercase;
 }
+.ext-main {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
 
+/* Status */
+.status { font-size: .9rem; min-height: 1.2rem; }
+.status .success { color: #16a34a; }
+.status .error   { color: #dc2626; }
+.status .loading { color: #6b7280; }
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid #d1d5db;
+  border-top-color: #6b7280;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: .4rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Preview */
+.preview-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+.preview-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Button */
 .btn {
   padding: .75rem 1.5rem;
   background: #3b82f6;
@@ -97,60 +116,14 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   cursor: pointer;
   transition: background .2s, opacity .2s;
 }
-
 .btn:hover:not(:disabled) { background: #2563eb; }
-
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-.status { font-size: .9rem; min-height: 1.5rem; }
-
-.status .success { color: #16a34a; }
-.status .error   { color: #dc2626; }
-.status .loading { color: #6b7280; }
-
-.spinner {
-  display: inline-block;
-  width: 14px; height: 14px;
-  border: 2px solid #d1d5db;
-  border-top-color: #6b7280;
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  vertical-align: middle;
-  margin-right: .4rem;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.debug-panel {
-  border-top: 1px solid #e5e7eb;
-  padding-top: .75rem;
-}
-
-.debug-panel summary {
+/* Compare link */
+.compare-link {
   font-size: .8rem;
   color: #9ca3af;
-  cursor: pointer;
-  user-select: none;
+  text-align: center;
+  text-decoration: none;
 }
-
-.btn-debug {
-  margin-top: .6rem;
-  padding: .4rem .9rem;
-  font-size: .8rem;
-  background: #6b7280;
-}
-
-.btn-debug:hover:not(:disabled) { background: #4b5563; }
-
-.debug-output {
-  margin-top: .6rem;
-  background: #f3f4f6;
-  border-radius: 6px;
-  padding: .75rem;
-  font-size: .75rem;
-  white-space: pre-wrap;
-  word-break: break-all;
-  color: #374151;
-  max-height: 300px;
-  overflow-y: auto;
-}
+.compare-link:hover { color: #3b82f6; }

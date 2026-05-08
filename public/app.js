@@ -7,10 +7,16 @@ import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
-// ── バージョン表示 ────────────────────────────────────────
+// ── バージョン・バックエンド URL 取得 ─────────────────────
+
+let backendUrl = '';
 
 fetch('/api/version').then(r => r.json())
   .then(d => { document.getElementById('version').textContent = 'v' + d.version; })
+  .catch(() => {});
+
+fetch('/api/config').then(r => r.json())
+  .then(d => { backendUrl = d.backendUrl || ''; })
   .catch(() => {});
 
 // ── DOM ──────────────────────────────────────────────────
@@ -212,24 +218,55 @@ async function loadGLTF(files, mgr) {
 // ── GLB エクスポート ──────────────────────────────────────
 
 convertBtn.addEventListener('click', async () => {
-  if (!loadedObject) return;
-  setStatus('<span class="loading"><span class="spinner"></span>GLB に変換中...</span>');
+  if (!selectedFiles.length) return;
+  const mainFile = selectedFiles.find(f => MAIN_EXTS.has(ext(f)));
+  const stem = mainFile ? mainFile.name.replace(/\.[^.]+$/, '') : 'model';
+
   convertBtn.disabled = true;
 
+  // バックエンド（Blender）が使えるなら優先
+  if (backendUrl) {
+    setStatus('<span class="loading"><span class="spinner"></span>Blender で変換中...</span>');
+    try {
+      const form = new FormData();
+      selectedFiles.forEach(f => form.append('files', f));
+      const res = await fetch(`${backendUrl}/convert`, { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: '不明なエラー' }));
+        throw new Error(err.detail);
+      }
+      const blob = await res.blob();
+      download(blob, stem + '.glb');
+      setStatus(`<span class="success">✓ ${stem}.glb をダウンロードしました（Blender変換）</span>`);
+      convertBtn.disabled = false;
+      return;
+    } catch (e) {
+      setStatus(`<span class="loading"><span class="spinner"></span>バックエンドに失敗、ブラウザ変換にフォールバック中...</span>`);
+    }
+  }
+
+  // フォールバック：Three.js クライアントサイド変換
+  if (!loadedObject) {
+    setStatus('<span class="error">モデルが読み込まれていません</span>');
+    convertBtn.disabled = false;
+    return;
+  }
   try {
     const buf = await new Promise((ok, ng) =>
       new GLTFExporter().parse(loadedObject, ok, ng, { binary: true })
     );
-    const mainFile = selectedFiles.find(f => MAIN_EXTS.has(ext(f)));
-    const stem = mainFile ? mainFile.name.replace(/\.[^.]+$/, '') : 'model';
-    const url  = URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
-    const a    = Object.assign(document.createElement('a'), { href: url, download: stem + '.glb' });
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setStatus(`<span class="success">✓ ${stem}.glb をダウンロードしました</span>`);
+    download(new Blob([buf], { type: 'model/gltf-binary' }), stem + '.glb');
+    setStatus(`<span class="success">✓ ${stem}.glb をダウンロードしました（ブラウザ変換）</span>`);
   } catch (e) {
     setStatus(`<span class="error">変換エラー: ${e.message}</span>`);
   } finally {
     convertBtn.disabled = false;
   }
 });
+
+function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

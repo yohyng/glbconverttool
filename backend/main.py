@@ -1,60 +1,74 @@
-import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, Response
-from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 
-from converter import MAX_FILE_SIZE, convert_to_glb
+app = FastAPI()
 
-app = FastAPI(title="GLB Converter")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
+)
 
-ALLOWED_EXTENSIONS = {".obj", ".fbx", ".mtl"}
-FRONTEND_DIR = Path(__file__).parent.parent / "public"
+BLENDER = Path("/opt/blender/blender")
+SCRIPT  = Path(__file__).parent / "blender_convert.py"
 
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+MAIN_EXTS = {".obj", ".fbx", ".dae", ".gltf", ".glb"}
+ALL_EXTS  = MAIN_EXTS | {".mtl", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tga"}
+MAX_SIZE  = 100 * 1024 * 1024  # 100 MB
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    return (FRONTEND_DIR / "index.html").read_text()
+@app.get("/health")
+def health():
+    return {"ok": True, "blender": BLENDER.exists()}
 
 
 @app.post("/convert")
 async def convert(files: list[UploadFile] = File(...)):
     for f in files:
-        if Path(f.filename).suffix.lower() not in ALLOWED_EXTENSIONS:
-            raise HTTPException(400, f"Unsupported file: {f.filename}")
+        if Path(f.filename).suffix.lower() not in ALL_EXTS:
+            raise HTTPException(400, f"非対応の形式: {f.filename}")
 
     main_file = next(
-        (f for f in files if Path(f.filename).suffix.lower() in {".obj", ".fbx"}),
-        None,
+        (f for f in files if Path(f.filename).suffix.lower() in MAIN_EXTS), None
     )
-    if main_file is None:
-        raise HTTPException(400, "OBJ または FBX ファイルが含まれていません")
+    if not main_file:
+        raise HTTPException(400, "変換対象ファイルが見つかりません（OBJ / FBX / DAE / GLTF / GLB）")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
         for f in files:
-            dest = tmpdir / Path(f.filename).name
-            content = await f.read()
-            if len(content) > MAX_FILE_SIZE:
+            data = await f.read()
+            if len(data) > MAX_SIZE:
                 raise HTTPException(413, f"{f.filename} が 100MB を超えています")
-            dest.write_bytes(content)
+            (tmp / Path(f.filename).name).write_bytes(data)
 
-        input_path = tmpdir / Path(main_file.filename).name
+        input_path  = tmp / Path(main_file.filename).name
+        output_path = tmp / (input_path.stem + ".glb")
 
         try:
-            glb_bytes = convert_to_glb(input_path)
-        except Exception as e:
-            raise HTTPException(500, f"変換に失敗しました: {e}")
+            result = subprocess.run(
+                [str(BLENDER), "--background", "--python", str(SCRIPT),
+                 "--", str(input_path), str(output_path)],
+                capture_output=True, text=True, timeout=180
+            )
+        except subprocess.TimeoutExpired:
+            raise HTTPException(504, "変換がタイムアウトしました（180秒）")
 
-    output_name = input_path.stem + ".glb"
+        if not output_path.exists():
+            tail = (result.stdout + result.stderr)[-600:]
+            raise HTTPException(500, f"変換に失敗しました:\n{tail}")
+
+        glb = output_path.read_bytes()
+
+    name = input_path.stem + ".glb"
     return Response(
-        content=glb_bytes,
+        content=glb,
         media_type="model/gltf-binary",
-        headers={"Content-Disposition": f'attachment; filename="{output_name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )

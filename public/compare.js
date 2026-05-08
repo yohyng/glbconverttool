@@ -105,20 +105,19 @@ function setModel(state, object) {
 function fixOBJMaterials(object) {
   object.traverse(node => {
     if (!node.isMesh) return;
-    const mats = Array.isArray(node.material) ? node.material : [node.material];
-    node.material = mats.map(mat => {
+    const wasArray = Array.isArray(node.material);
+    const mats = wasArray ? node.material : [node.material];
+    const newMats = mats.map(mat => {
       if (!mat) return mat;
-      const kd = mat.color ?? new THREE.Color(0.8, 0.8, 0.8);
+      const kd = mat.color    ?? new THREE.Color(0.8, 0.8, 0.8);
       const ks = mat.specular ?? new THREE.Color(0, 0, 0);
       const ns = mat.shininess ?? 0;
       const opacity = mat.opacity ?? 1.0;
       const transparent = opacity < 1.0;
-
       const roughness = Math.max(0.04, Math.sqrt(2.0 / (ns + 2.0)));
 
       let color, metalness;
       if (kd.r + kd.g + kd.b < 0.03 && ks.r + ks.g + ks.b > 0.03) {
-        // メタリックワークフロー: Ks を色として使う
         color = ks.clone();
         metalness = ns > 100 ? 1.0 : 0.0;
       } else {
@@ -135,7 +134,8 @@ function fixOBJMaterials(object) {
         side: THREE.DoubleSide,
       });
     });
-    if (!Array.isArray(node.material)) node.material = node.material[0];
+    // 元が単体マテリアルなら配列に戻さない
+    node.material = wasArray ? newMats : newMats[0];
   });
   return object;
 }
